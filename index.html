@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pimm Check Calories</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: #f4f7f6;
+    margin: 0;
+    padding: 20px;
+    color: #333;
+  }
+  .container { max-width: 480px; margin: 0 auto; }
+  h1 { text-align: center; color: #2e7d32; font-size: 24px; margin-bottom: 4px; }
+  .sub { text-align: center; color: #888; font-size: 12px; margin-bottom: 16px; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .card h3 { margin-top: 0; font-size: 15px; color: #2e7d32; }
+  label { font-size: 13px; color: #555; }
+  input, select, button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    margin-bottom: 10px;
+  }
+  button {
+    background: #2e7d32;
+    color: #fff;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  button:hover { background: #256a29; }
+  button.secondary { background: #777; }
+  button.danger { background: #e53935; }
+  .goal-row, .row { display: flex; gap: 8px; }
+  .goal-row input, .row > * { flex: 1; }
+  .summary { text-align: center; font-size: 18px; margin-top: 8px; }
+  .summary b { color: #2e7d32; }
+  .bar-bg { background: #e0e0e0; border-radius: 8px; height: 16px; overflow: hidden; margin-top: 8px; }
+  .bar-fill { height: 100%; background: #2e7d32; transition: width 0.3s; }
+
+  .tabs { display: flex; margin-bottom: 16px; background: #e0e0e0; border-radius: 10px; padding: 4px; gap: 2px; }
+  .tab-btn {
+    flex: 1; text-align: center; padding: 8px 4px; margin: 0; border-radius: 8px;
+    background: transparent; color: #555; font-weight: 600; cursor: pointer; border: none; font-size: 13px;
+  }
+  .tab-btn.active { background: #2e7d32; color: #fff; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  .log-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 8px 0; border-bottom: 1px solid #eee;
+  }
+  .log-item .name { font-weight: 500; }
+  .log-item .cal { color: #666; font-size: 14px; }
+  .log-item button { width: auto; background: #e53935; padding: 4px 10px; margin: 0; font-size: 12px; }
+  .empty { text-align: center; color: #999; padding: 20px; }
+
+  .suggest-box {
+    max-height: 160px; overflow-y: auto; border: 1px solid #ddd; border-radius: 8px;
+    margin-top: -6px; margin-bottom: 10px; display: none; background: #fff;
+  }
+  .suggest-box div { padding: 10px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+  .suggest-box div:hover { background: #f1f8f1; }
+
+  .badge {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 10px;
+    margin-left: 6px; vertical-align: middle;
+  }
+  .badge.verified { background: #c8e6c9; color: #2e7d32; }
+  .badge.custom { background: #fff3cd; color: #946c00; }
+
+  .meal-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 0; border-bottom: 1px dashed #eee; font-size: 14px;
+  }
+  .meal-item button { width: auto; background: #e53935; padding: 2px 8px; margin: 0; font-size: 11px; }
+  .meal-total { font-weight: bold; text-align: right; margin-top: 8px; color: #2e7d32; font-size: 16px; }
+  .ingredient-nutri { font-size: 12px; color: #888; margin-top: -6px; margin-bottom: 10px; }
+
+  .bmr-result {
+    background: #f1f8f1; border-radius: 10px; padding: 12px; margin-top: 10px; font-size: 14px;
+  }
+  .bmr-result div { margin-bottom: 4px; }
+  .bmr-result .final { font-size: 18px; font-weight: bold; color: #2e7d32; margin-top: 8px; }
+  .warn-box {
+    background: #fff3cd; color: #946c00; border-radius: 8px; padding: 10px; font-size: 13px; margin-top: 8px;
+  }
+  .disclaimer-box {
+    background: #fff3e0; color: #8a5a00; border-radius: 8px;
+    padding: 10px; font-size: 12px; margin-top: 10px; line-height: 1.5;
+    border-left: 4px solid #ff9800;
+  }
+  .footer-disclaimer {
+    text-align: center; color: #999; font-size: 11px; margin-top: 20px;
+    padding: 12px; line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🍽️ Pimm Check Calories</h1>
+  <div class="sub">ฐานข้อมูลเมนูอ้างอิงกรมอนามัย/INMU + ประกอบเมนูเองได้</div>
+
+  <!-- BMR/TDEE Calculator -->
+  <div class="card">
+    <h3>🎯 คำนวณเป้าหมายแคลอรี่อัตโนมัติ (BMR/TDEE)</h3>
+    <div class="row">
+      <select id="bmrGender">
+        <option value="male">ชาย</option>
+        <option value="female">หญิง</option>
+      </select>
+      <input type="number" id="bmrAge" placeholder="อายุ (ปี)">
+    </div>
+    <div class="row">
+      <input type="number" id="bmrWeight" placeholder="น้ำหนัก (kg)">
+      <input type="number" id="bmrHeight" placeholder="ส่วนสูง (cm)">
+    </div>
+    <label>ระดับกิจกรรมในชีวิตประจำวัน</label>
+    <select id="bmrActivity">
+      <option value="1.2">นั่งทำงาน ไม่ออกกำลังกาย</option>
+      <option value="1.375">ออกกำลังกายเบาๆ 1-3 วัน/สัปดาห์</option>
+      <option value="1.55">ออกกำลังกายปานกลาง 3-5 วัน/สัปดาห์</option>
+      <option value="1.725">ออกกำลังกายหนัก 6-7 วัน/สัปดาห์</option>
+      <option value="1.9">ออกกำลังกายหนักมาก/ใช้แรงงานหนัก</option>
+    </select>
+    <label>เป้าหมาย</label>
+    <select id="bmrGoal" onchange="toggleDeficitRow()">
+      <option value="lose">ลดน้ำหนัก</option>
+      <option value="maintain">คงน้ำหนักปัจจุบัน</option>
+      <option value="gain">เพิ่มน้ำหนัก</option>
+    </select>
+    <div id="deficitRow">
+      <label>อัตราลด/เพิ่มต่อสัปดาห์</label>
+      <select id="bmrRate">
+        <option value="250">ค่อยเป็นค่อยไป (≈0.25 kg/สัปดาห์)</option>
+        <option value="500" selected>ปานกลาง (≈0.5 kg/สัปดาห์)</option>
+        <option value="750">เร็ว (≈0.75 kg/สัปดาห์)</option>
+      </select>
+    </div>
+    <button onclick="calculateBMR()">คำนวณและตั้งเป้าหมาย</button>
+    <div class="bmr-result" id="bmrResult" style="display:none;"></div>
+  </div>
+
+  <!-- เป้าหมายแคลอรี่ -->
+  <div class="card">
+    <label>เป้าหมายแคลอรี่ต่อวัน (kcal)</label>
+    <div class="goal-row">
+      <input type="number" id="goalInput" placeholder="เช่น 1500">
+      <button style="width:auto;" onclick="saveGoal()">ตั้งค่าเอง</button>
+    </div>
+  </div>
+
+  <!-- สรุปวันนี้ -->
+  <div class="card">
+    <div class="summary">
+      กินไปแล้ว <b id="totalCal">0</b> / <span id="goalDisplay">0</span> kcal
+    </div>
+    <div class="bar-bg"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtnQuick" onclick="switchTab('quick')">🔍 ค้นหาเมนู</button>
+    <button class="tab-btn" id="tabBtnBuild" onclick="switchTab('build')">🧩 ประกอบเอง</button>
+    <button class="tab-btn" id="tabBtnTips" onclick="switchTab('tips')">💡 คาร์บดีแคลต่ำ</button>
+  </div>
+
+  <!-- Tab 1: ค้นหาเมนู -->
+  <div class="tab-content active" id="tab-quick">
+    <div class="card">
+      <label>ค้นหาเมนูอาหาร</label>
+      <input type="text" id="foodSearch" placeholder="พิมพ์ชื่อเมนู เช่น ผัดกะเพรา" autocomplete="off">
+      <div class="suggest-box" id="suggestBox"></div>
+      <button onclick="addSelectedFood()">+ เพิ่มลงบันทึกวันนี้</button>
+    </div>
+  </div>
+
+  <!-- Tab 2: ประกอบเมนูเอง -->
+  <div class="tab-content" id="tab-build">
+    <div class="card">
+      <label>เลือกวัตถุดิบ</label>
+      <select id="ingredientSelect" onchange="updateIngredientHint()"></select>
+      <div class="ingredient-nutri" id="ingredientHint"></div>
+      <div class="row">
+        <input type="number" id="ingredientGrams" placeholder="ปริมาณ (กรัม)">
+        <button style="width:auto;" onclick="useStandardUnit()">ใช้หน่วยมาตรฐาน</button>
+      </div>
+      <button onclick="addIngredientToMeal()">+ เพิ่มวัตถุดิบนี้</button>
+    </div>
+
+    <div class="card">
+      <label>วัตถุดิบที่เลือกไว้ (เมนูที่กำลังประกอบ)</label>
+      <div id="mealList"></div>
+      <div class="meal-total" id="mealTotal">รวม 0 kcal</div>
+      <input type="text" id="menuNameInput" placeholder="ตั้งชื่อเมนูนี้ เช่น กะเพราไข่ดาวสูตรฉัน" style="margin-top:12px;">
+      <div class="row">
+        <button onclick="saveMealAsMenu()">💾 บันทึกเป็นเมนูโปรด</button>
+        <button class="secondary" onclick="addMealToLogDirectly()">+ บันทึกลงวันนี้เลย</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab 3: คาร์บดีแคลต่ำ -->
+  <div class="tab-content" id="tab-tips">
+    <div class="card">
+      <h3>🌱 อาหารคาร์บเชิงซ้อน / ไฟเบอร์สูง แคลอรี่ต่ำ</h3>
+      <div class="sub" style="text-align:left; margin-bottom:12px;">
+        เหมาะสำหรับคนคุมอาหาร ช่วยให้อิ่มท้องนาน น้ำตาลในเลือดไม่พุ่งเร็ว (ข้อมูลต่อ 100 กรัม)
+      </div>
+      <div id="tipsList"></div>
+    </div>
+  </div>
+
+  <!-- บันทึกวันนี้ -->
+  <div class="card">
+    <label>บันทึกวันนี้</label>
+    <div id="logList"></div>
+    <button class="secondary" onclick="clearLog()" style="margin-top:10px;">ล้างบันทึกวันนี้</button>
+  </div>
+
+  <div class="footer-disclaimer">
+    แอปนี้ใช้ค่าแคลอรี่โดยประมาณจากฐานข้อมูลอ้างอิงกรมอนามัยและสถาบันโภชนาการ ม.มหิดล (INMU)
+    และสูตรคำนวณมาตรฐานสากล เพื่อการติดตามสุขภาพเบื้องต้นเท่านั้น ไม่ใช่คำแนะนำทางการแพทย์
+    ผลลัพธ์อาจคลาดเคลื่อนจากค่าจริงได้ตามวิธีปรุงอาหารและสภาพร่างกายแต่ละบุคคล
+    หากมีโรคประจำตัวหรือข้อสงสัยด้านสุขภาพ ควรปรึกษาแพทย์หรือนักกำหนดอาหารวิชาชีพ
+  </div>
+</div>
+
+<script>
+/* Google Apps Script Web App URL สำหรับซิงค์ข้อมูลลง Google Sheets */
+const SHEET_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxRyu2ZSvFHJ4bMnmuK0r2GrIRZTe2ldpvRa-Vw1VIGO1W6NAVa2DlLtu_Kc3ydpyjX/exec";
+
+/* ============================================================
+   ฐานข้อมูลเมนูสำเร็จรูป (kcal ต่อ 1 จาน/หน่วยบริโภคปกติ)
+   ============================================================ */
+const foodDB = {
+  "ข้าวมันไก่": 596, "ข้าวหมูแดง": 541, "ข้าวราดแกงเขียวหวานไก่": 483,
+  "ข้าวยำปักษ์ใต้": 248, "ข้าวขาหมู": 436, "ข้าวผัดกะเพราไก่": 554,
+  "ข้าวผัดกะเพราไก่ไข่ดาว": 630, "ข้าวผัดกะเพราหมูกรอบ": 650,
+  "ข้าวผัดกะเพราหมูสับไข่ดาว": 620, "ข้าวผัดหมูใส่ไข่": 557, "ข้าวหมกไก่": 534,
+  "ผัดไทยใส่ไข่": 577, "ผัดไทยกุ้งสด": 520,
+  "ก๋วยเตี๋ยวเส้นใหญ่ราดหน้าหมู": 397, "ก๋วยเตี๋ยวเส้นใหญ่ราดหน้าไก่": 397,
+  "ก๋วยเตี๋ยวต้มยำกุ้ง": 320, "ก๋วยเตี๋ยวคั่วไก่": 435, "ก๋วยเตี๋ยวแขก": 380,
+  "ก๋วยจั๊บ": 240, "ก๋วยจั๊บญวณ": 235, "ข้าวซอยไก่": 395, "ข้าวซอยหมู": 395,
+  "ขนมจีนน้ำยา": 375, "ขนมจีนน้ำพริก": 450, "ขนมจีนซาวน้ำ": 320, "ขนมจีนน้ำเงี้ยว": 305,
+  "ข้าวสวย": 68, "แกงจืดตำลึงหมูสับ": 197, "แกงเลียงผักรวม": 95,
+  "แกงจืดมะระสอดไส้": 199, "แกงส้ม": 110, "ต้มจับฉ่าย": 75,
+  "ต้มยำปลาทู": 60, "ต้มยำปลาหมึก": 60, "ไข่เจียว": 215, "ไข่ดาว": 215,
+  "ไข่ตุ๋นทรงเครื่อง": 159, "กระเพาะปลา": 150, "กระเพาะปลาตุ๋นน้ำแดง": 225
+};
+
+/* ============================================================
+   ฐานข้อมูลวัตถุดิบ (kcal/protein/carb/fat ต่อ 100 กรัม)
+   ============================================================ */
+const ingredientDB = [
+  { id: "rice_cooked", name: "ข้าวสวย (1 ทัพพี ~150g)", category: "ข้าว/แป้ง", cal: 130, protein: 2.7, carb: 28, fat: 0.3, unitGram: 150 },
+  { id: "sticky_rice", name: "ข้าวเหนียวนึ่ง (1 ก้อน ~150g)", category: "ข้าว/แป้ง", cal: 160, protein: 3.5, carb: 35, fat: 0.3, unitGram: 150 },
+  { id: "noodle_rice", name: "เส้นก๋วยเตี๋ยว (ลวกสุก)", category: "ข้าว/แป้ง", cal: 109, protein: 1.8, carb: 25, fat: 0.2, unitGram: 200 },
+  { id: "egg_noodle", name: "บะหมี่สุก", category: "ข้าว/แป้ง", cal: 138, protein: 4.5, carb: 25, fat: 2.1, unitGram: 200 },
+  { id: "glass_noodle", name: "วุ้นเส้นสุก", category: "ข้าว/แป้ง", cal: 90, protein: 0.1, carb: 22, fat: 0.1, unitGram: 150 },
+  { id: "pork_lean", name: "หมูเนื้อล้วน (สุก)", category: "เนื้อสัตว์", cal: 185, protein: 27, carb: 0, fat: 8, unitGram: 100 },
+  { id: "pork_belly", name: "หมูสามชั้น (สุก)", category: "เนื้อสัตว์", cal: 398, protein: 14, carb: 0, fat: 37, unitGram: 100 },
+  { id: "pork_ground", name: "หมูสับ (สุก)", category: "เนื้อสัตว์", cal: 263, protein: 25, carb: 0, fat: 17, unitGram: 100 },
+  { id: "chicken_breast", name: "อกไก่ (สุก ไม่มีหนัง)", category: "เนื้อสัตว์", cal: 165, protein: 31, carb: 0, fat: 3.6, unitGram: 100 },
+  { id: "chicken_thigh", name: "สะโพกไก่ (สุก มีหนัง)", category: "เนื้อสัตว์", cal: 250, protein: 26, carb: 0, fat: 16, unitGram: 100 },
+  { id: "beef", name: "เนื้อวัว (สุก)", category: "เนื้อสัตว์", cal: 250, protein: 26, carb: 0, fat: 15, unitGram: 100 },
+  { id: "shrimp", name: "กุ้ง (สุก)", category: "เนื้อสัตว์", cal: 99, protein: 24, carb: 0.2, fat: 0.3, unitGram: 100 },
+  { id: "squid", name: "ปลาหมึก (สุก)", category: "เนื้อสัตว์", cal: 92, protein: 16, carb: 3.1, fat: 1.4, unitGram: 100 },
+  { id: "fish_mackerel", name: "ปลาทู (สุก)", category: "เนื้อสัตว์", cal: 190, protein: 22, carb: 0, fat: 11, unitGram: 100 },
+  { id: "egg", name: "ไข่ไก่ (1 ฟอง ~50g)", category: "เนื้อสัตว์", cal: 155, protein: 13, carb: 1.1, fat: 11, unitGram: 50 },
+  { id: "tofu", name: "เต้าหู้ขาว", category: "โปรตีนจากพืช", cal: 76, protein: 8, carb: 1.9, fat: 4.8, unitGram: 100 },
+  { id: "veg_oil", name: "น้ำมันพืช (1 ช้อนโต๊ะ ~14g)", category: "ไขมัน", cal: 884, protein: 0, carb: 0, fat: 100, unitGram: 14 },
+  { id: "coconut_milk", name: "กะทิ (1/4 ถ้วย ~60g)", category: "ไขมัน", cal: 230, protein: 2.3, carb: 6, fat: 24, unitGram: 60 },
+  { id: "butter", name: "เนย (1 ช้อนโต๊ะ ~14g)", category: "ไขมัน", cal: 717, protein: 0.9, carb: 0.1, fat: 81, unitGram: 14 },
+  { id: "mixed_veg", name: "ผักรวม (สุก)", category: "ผัก", cal: 35, protein: 2, carb: 6, fat: 0.3, unitGram: 100 },
+  { id: "morning_glory", name: "ผักบุ้ง (ผัด)", category: "ผัก", cal: 45, protein: 2.6, carb: 4, fat: 2, unitGram: 100 },
+  { id: "basil", name: "ใบกะเพรา (~20g)", category: "ผัก", cal: 23, protein: 3.2, carb: 2.6, fat: 0.6, unitGram: 20 },
+  { id: "sugar", name: "น้ำตาลทราย (1 ช้อนชา ~5g)", category: "เครื่องปรุง", cal: 387, protein: 0, carb: 100, fat: 0, unitGram: 5 },
+  { id: "fish_sauce", name: "น้ำปลา (1 ช้อนโต๊ะ ~15g)", category: "เครื่องปรุง", cal: 35, protein: 5, carb: 3.6, fat: 0, unitGram: 15 },
+  { id: "soy_sauce", name: "ซีอิ๊วขาว (1 ช้อนโต๊ะ ~15g)", category: "เครื่องปรุง", cal: 53, protein: 6, carb: 5.6, fat: 0, unitGram: 15 },
+  { id: "oyster_sauce", name: "ซอสหอยนางรม (1 ช้อนโต๊ะ ~15g)", category: "เครื่องปรุง", cal: 127, protein: 3, carb: 20, fat: 0.3, unitGram: 15 }
+];
+
+/* ============================================================
+   ฐานข้อมูลอาหารคาร์บดี/ไฟเบอร์สูง แคลอรี่ต่ำ (ต่อ 100 กรัม)
+   ============================================================ */
+const lowCalHighCarbDB = [
+  { name: "บร็อกโคลี (ลวก)", carb: 7.0, fiber: 3.3, cal: 34, tip: "ไฟเบอร์สูง อยู่ท้องนาน" },
+  { name: "กะหล่ำปลี (สุก)", carb: 5.8, fiber: 2.5, cal: 25, tip: "แคลต่ำ กินได้เยอะ" },
+  { name: "ผักบุ้ง (ผัด/ลวก)", carb: 4.0, fiber: 2.1, cal: 22, tip: "หาซื้อง่าย ไฟเบอร์ดี" },
+  { name: "เห็ดนางฟ้า / เห็ดเข็มทอง", carb: 6.0, fiber: 2.7, cal: 35, tip: "ให้สัมผัสคล้ายเนื้อ แคลน้อย" },
+  { name: "แก้วมังกร", carb: 11.0, fiber: 3.0, cal: 60, tip: "ผลไม้คาร์บต่ำ น้ำตาลน้อย" },
+  { name: "มะละกอสุก", carb: 11.0, fiber: 1.7, cal: 43, tip: "ช่วยระบบขับถ่าย" },
+  { name: "ฝรั่ง", carb: 14.0, fiber: 5.4, cal: 60, tip: "วิตามินซีสูง อยู่ท้องมาก" },
+  { name: "แอปเปิ้ลเขียว", carb: 14.0, fiber: 2.4, cal: 52, tip: "น้ำตาลต่ำกว่าแอปเปิ้ลแดง" },
+  { name: "ข้าวโอ๊ต (สุก)", carb: 12.0, fiber: 1.7, cal: 71, tip: "คาร์บเชิงซ้อน พลังงานยั่งยืน" },
+  { name: "มันเทศ (นึ่ง)", carb: 20.0, fiber: 3.0, cal: 86, tip: "กินแทนข้าวขาว อิ่มนานกว่า" }
+];
+
+const foodNames = Object.keys(foodDB);
+let selectedFood = null;
+let currentMeal = [];
+
+/* ---------- BMR / TDEE Calculator ---------- */
+function toggleDeficitRow() {
+  const goal = document.getElementById('bmrGoal').value;
+  document.getElementById('deficitRow').style.display = goal === 'maintain' ? 'none' : 'block';
+}
+
+function calculateBMR() {
+  const gender = document.getElementById('bmrGender').value;
+  const age = parseFloat(document.getElementById('bmrAge').value);
+  const weight = parseFloat(document.getElementById('bmrWeight').value);
+  const height = parseFloat(document.getElementById('bmrHeight').value);
+  const activity = parseFloat(document.getElementById('bmrActivity').value);
+  const goal = document.getElementById('bmrGoal').value;
+  const rate = parseFloat(document.getElementById('bmrRate').value);
+
+  if (!age || !weight || !height) {
+    alert('กรุณากรอกอายุ น้ำหนัก และส่วนสูงให้ครบ');
+    return;
+  }
+
+  let bmr = gender === 'male'
+    ? 10 * weight + 6.25 * height - 5 * age + 5
+    : 10 * weight + 6.25 * height - 5 * age - 161;
+  bmr = Math.round(bmr);
+
+  const tdee = Math.round(bmr * activity);
+
+  let target = tdee;
+  if (goal === 'lose') target = tdee - rate;
+  if (goal === 'gain') target = tdee + rate;
+  target = Math.round(target);
+
+  const minSafe = gender === 'male' ? 1500 : 1200;
+  let warnMsg = '';
+  if (target < minSafe) {
+    warnMsg = `⚠️ เป้าหมายที่คำนวณได้ (${target} kcal) ต่ำกว่าขั้นต่ำที่ปลอดภัย (${minSafe} kcal) ระบบปรับให้เป็น ${minSafe} kcal แทน เพื่อป้องกันผลเสียต่อสุขภาพและเมตาบอลิซึม ควรลดน้ำหนักด้วยอัตราที่ช้าลง หรือเพิ่มการออกกำลังกายแทนการจำกัดอาหารมากเกินไป`;
+    target = minSafe;
+  }
+
+  const resultBox = document.getElementById('bmrResult');
+  resultBox.style.display = 'block';
+  resultBox.innerHTML = `
+    <div>🔥 BMR (พลังงานพื้นฐาน): <b>${bmr}</b> kcal/วัน</div>
+    <div>⚡ TDEE (พลังงานใช้จริงต่อวัน): <b>${tdee}</b> kcal/วัน</div>
+    <div class="final">🎯 เป้าหมายแนะนำ: ${target} kcal/วัน</div>
+    ${warnMsg ? `<div class="warn-box">${warnMsg}</div>` : ''}
+    <div class="disclaimer-box">
+      ℹ️ ตัวเลขนี้เป็นค่าประมาณจากสูตรมาตรฐาน (Mifflin-St Jeor) ใช้ได้กับคนทั่วไปที่สุขภาพปกติเท่านั้น
+      หากคุณมีโรคประจำตัว เช่น เบาหวาน ไทรอยด์ โรคไต โรคหัวใจ กำลังตั้งครรภ์/ให้นมบุตร หรือมีภาวะสุขภาพพิเศษอื่นๆ
+      กรุณาปรึกษาแพทย์หรือนักกำหนดอาหารก่อนนำค่านี้ไปใช้ควบคุมอาหารจริง
+    </div>
+  `;
+
+  document.getElementById('goalInput').value = target;
+  localStorage.setItem('calGoal', target);
+  renderLog();
+}
+
+/* ---------- Tabs ---------- */
+function switchTab(tab) {
+  document.getElementById('tab-quick').classList.toggle('active', tab === 'quick');
+  document.getElementById('tab-build').classList.toggle('active', tab === 'build');
+  document.getElementById('tab-tips').classList.toggle('active', tab === 'tips');
+  document.getElementById('tabBtnQuick').classList.toggle('active', tab === 'quick');
+  document.getElementById('tabBtnBuild').classList.toggle('active', tab === 'build');
+  document.getElementById('tabBtnTips').classList.toggle('active', tab === 'tips');
+}
+
+/* ---------- โหมด 1: ค้นหาเมนูสำเร็จรูป (รวมเมนู custom) ---------- */
+function getCustomMenus() { return JSON.parse(localStorage.getItem('customMenus') || '{}'); }
+function saveCustomMenus(obj) { localStorage.setItem('customMenus', JSON.stringify(obj)); }
+
+function showSuggestionsAll() {
+  const q = document.getElementById('foodSearch').value.trim();
+  const box = document.getElementById('suggestBox');
+  box.innerHTML = '';
+  if (!q) { box.style.display = 'none'; return; }
+  const customMenus = getCustomMenus();
+  const allNames = [...foodNames.map(n => ({ name: n, cal: foodDB[n], custom: false }))];
+  Object.keys(customMenus).forEach(n => allNames.push({ name: n, cal: customMenus[n].cal, custom: true }));
+  const matches = allNames.filter(f => f.name.includes(q));
+  if (matches.length === 0) { box.style.display = 'none'; return; }
+  matches.slice(0, 8).forEach(f => {
+    const div = document.createElement('div');
+    div.innerHTML = `${f.name} — ${f.cal} kcal ${f.custom ? '<span class="badge custom">ของฉัน</span>' : '<span class="badge verified">ยืนยันแล้ว</span>'}`;
+    div.onclick = () => {
+      document.getElementById('foodSearch').value = f.name;
+      selectedFood = f.name;
+      box.style.display = 'none';
+    };
+    box.appendChild(div);
+  });
+  box.style.display = 'block';
+}
+
+function addSelectedFood() {
+  const q = document.getElementById('foodSearch').value.trim();
+  const customMenus = getCustomMenus();
+  if (selectedFood && foodDB[selectedFood] !== undefined) {
+    addToLog(selectedFood, foodDB[selectedFood], true);
+  } else if (selectedFood && customMenus[selectedFood]) {
+    addToLog(selectedFood, customMenus[selectedFood].cal, false);
+  } else if (foodDB[q] !== undefined) {
+    addToLog(q, foodDB[q], true);
+  } else if (customMenus[q]) {
+    addToLog(q, customMenus[q].cal, false);
+  } else {
+    alert('ไม่พบเมนูนี้ในฐานข้อมูล กรุณาเลือกจากรายการแนะนำ');
+    return;
+  }
+  document.getElementById('foodSearch').value = '';
+  selectedFood = null;
+  document.getElementById('suggestBox').style.display = 'none';
+}
+
+/* ---------- โหมด 2: ประกอบเมนูเอง ---------- */
+function populateIngredientSelect() {
+  const sel = document.getElementById('ingredientSelect');
+  const cats = {};
+  ingredientDB.forEach(i => { (cats[i.category] = cats[i.category] || []).push(i); });
+  sel.innerHTML = '';
+  Object.keys(cats).forEach(cat => {
+    const og = document.createElement('optgroup');
+    og.label = cat;
+    cats[cat].forEach(i => {
+      const opt = document.createElement('option');
+      opt.value = i.id;
+      opt.textContent = i.name;
+      og.appendChild(opt);
+    });
+    sel.appendChild(og);
+  });
+  updateIngredientHint();
+}
+
+function updateIngredientHint() {
+  const id = document.getElementById('ingredientSelect').value;
+  const item = ingredientDB.find(i => i.id === id);
+  if (!item) return;
+  document.getElementById('ingredientHint').textContent =
+    `${item.cal} kcal/100g · โปรตีน ${item.protein}g · คาร์บ ${item.carb}g · ไขมัน ${item.fat}g ต่อ 100g`;
+}
+
+function useStandardUnit() {
+  const id = document.getElementById('ingredientSelect').value;
+  const item = ingredientDB.find(i => i.id === id);
+  if (item) document.getElementById('ingredientGrams').value = item.unitGram;
+}
+
+function addIngredientToMeal() {
+  const id = document.getElementById('ingredientSelect').value;
+  const grams = parseFloat(document.getElementById('ingredientGrams').value);
+  const item = ingredientDB.find(i => i.id === id);
+  if (!item || !grams || grams <= 0) { alert('กรุณาใส่ปริมาณ (กรัม) ให้ถูกต้อง'); return; }
+  const factor = grams / 100;
+  currentMeal.push({
+    name: item.name, grams: grams,
+    cal: Math.round(item.cal * factor),
+    protein: +(item.protein * factor).toFixed(1),
+    carb: +(item.carb * factor).toFixed(1),
+    fat: +(item.fat * factor).toFixed(1)
+  });
+  document.getElementById('ingredientGrams').value = '';
+  renderMealBuilder();
+}
+
+function removeMealItem(index) { currentMeal.splice(index, 1); renderMealBuilder(); }
+
+function calcMealTotal() {
+  return currentMeal.reduce((sum, i) => ({
+    cal: sum.cal + i.cal,
+    protein: +(sum.protein + i.protein).toFixed(1),
+    carb: +(sum.carb + i.carb).toFixed(1),
+    fat: +(sum.fat + i.fat).toFixed(1)
+  }), { cal: 0, protein: 0, carb: 0, fat: 0 });
+}
+
+function renderMealBuilder() {
+  const list = document.getElementById('mealList');
+  list.innerHTML = '';
+  if (currentMeal.length === 0) {
+    list.innerHTML = '<div class="empty">ยังไม่ได้เลือกวัตถุดิบ</div>';
+  } else {
+    currentMeal.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'meal-item';
+      div.innerHTML = `<span>${item.name} (${item.grams}g) — ${item.cal} kcal</span><button onclick="removeMealItem(${i})">ลบ</button>`;
+      list.appendChild(div);
+    });
+  }
+  const total = calcMealTotal();
+  document.getElementById('mealTotal').textContent =
+    `รวม ${total.cal} kcal · โปรตีน ${total.protein}g · คาร์บ ${total.carb}g · ไขมัน ${total.fat}g`;
+}
+
+function saveMealAsMenu() {
+  const name = document.getElementById('menuNameInput').value.trim();
+  if (!name) { alert('กรุณาตั้งชื่อเมนู'); return; }
+  if (currentMeal.length === 0) { alert('ยังไม่ได้เลือกวัตถุดิบ'); return; }
+  const total = calcMealTotal();
+  const customMenus = getCustomMenus();
+  customMenus[name] = { ...total, ingredients: [...currentMeal] };
+  saveCustomMenus(customMenus);
+  alert(`บันทึกเมนู "${name}" (${total.cal} kcal) เรียบร้อย — ดูได้ในช่องค้นหาเมนู`);
+  currentMeal = [];
+  document.getElementById('menuNameInput').value = '';
+  renderMealBuilder();
+}
+
+function addMealToLogDirectly() {
+  if (currentMeal.length === 0) { alert('ยังไม่ได้เลือกวัตถุดิบ'); return; }
+  const name = document.getElementById('menuNameInput').value.trim() || 'เมนูที่ประกอบเอง';
+  const total = calcMealTotal();
+  addToLog(name, total.cal, false);
+  currentMeal = [];
+  document.getElementById('menuNameInput').value = '';
+  renderMealBuilder();
+}
+
+/* ---------- แสดงรายการคาร์บดีแคลต่ำ ---------- */
+function renderTipsList() {
+  const container = document.getElementById('tipsList');
+  container.innerHTML = '';
+  lowCalHighCarbDB.forEach(item => {
+    const div = document.createElement('div');
+    div.className = 'log-item';
+    div.innerHTML = `
+      <div>
+        <div class="name">${item.name}</div>
+        <div class="cal">คาร์บ ${item.carb}g (ใยอาหาร ${item.fiber}g) · <b>${item.cal} kcal</b></div>
+        <div style="font-size:11px; color:#2e7d32; margin-top:2px;">💡 ${item.tip}</div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+/* ---------- บันทึกรายวัน (log + Sync Google Sheet) ---------- */
+function addToLog(name, cal, verified) {
+  const log = getLog();
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('th-TH');
+  const dateStr = now.toLocaleDateString('th-TH');
+  const datetime = `${dateStr} ${timeStr}`;
+  
+  const newItem = { name, cal, verified, time: timeStr };
+  log.push(newItem);
+  saveLog(log);
+  renderLog();
+
+  // ส่งข้อมูลไป Google Sheet แบบ Background
+  if (SHEET_WEB_APP_URL && SHEET_WEB_APP_URL.startsWith("https://")) {
+    fetch(SHEET_WEB_APP_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        datetime: datetime,
+        name: name,
+        cal: cal,
+        type: verified ? "ยืนยันแล้ว" : "ประกอบเอง"
+      })
+    }).catch(err => console.error("Sheet sync error:", err));
+  }
+}
+
+function getLog() {
+  const today = new Date().toDateString();
+  const saved = JSON.parse(localStorage.getItem('calLog') || '{}');
+  if (saved.date !== today) return [];
+  return saved.items || [];
+}
+function saveLog(items) {
+  const today = new Date().toDateString();
+  localStorage.setItem('calLog', JSON.stringify({ date: today, items }));
+}
+function removeItem(index) { const log = getLog(); log.splice(index, 1); saveLog(log); renderLog(); }
+function clearLog() { if (confirm('ล้างบันทึกของวันนี้ทั้งหมด?')) { saveLog([]); renderLog(); } }
+function saveGoal() {
+  const goal = parseInt(document.getElementById('goalInput').value) || 0;
+  localStorage.setItem('calGoal', goal);
+  renderLog();
+}
+
+function renderLog() {
+  const log = getLog();
+  const listEl = document.getElementById('logList');
+  listEl.innerHTML = '';
+  if (log.length === 0) {
+    listEl.innerHTML = '<div class="empty">ยังไม่มีรายการวันนี้</div>';
+  } else {
+    log.forEach((item, i) => {
+      const div = document.createElement('div');
+      div.className = 'log-item';
+      const badge = item.verified ? '<span class="badge verified">ยืนยันแล้ว</span>' : '<span class="badge custom">ประกอบเอง</span>';
+      div.innerHTML = `
+        <div><div class="name">${item.name} ${badge}</div><div class="cal">${item.cal} kcal · ${item.time}</div></div>
+        <button onclick="removeItem(${i})">ลบ</button>`;
+      listEl.appendChild(div);
+    });
+  }
+  const total = log.reduce((s, i) => s + i.cal, 0);
+  const goal = parseInt(localStorage.getItem('calGoal') || 0);
+  document.getElementById('totalCal').textContent = total;
+  document.getElementById('goalDisplay').textContent = goal || '-';
+  document.getElementById('goalInput').value = goal || '';
+  const pct = goal ? Math.min(100, (total / goal) * 100) : 0;
+  const bar = document.getElementById('barFill');
+  bar.style.width = pct + '%';
+  bar.style.background = pct >= 100 ? '#e53935' : '#2e7d32';
+}
+
+/* ---------- Event bindings ---------- */
+document.getElementById('foodSearch').addEventListener('input', showSuggestionsAll);
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#foodSearch') && !e.target.closest('#suggestBox')) {
+    document.getElementById('suggestBox').style.display = 'none';
+  }
+});
+
+/* ---------- Init ---------- */
+populateIngredientSelect();
+renderMealBuilder();
+renderTipsList();
+renderLog();
+</script>
+</body>
+</html>
